@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
 import {BalanceDelta} from "@uniswap/v4-core/src/types/BalanceDelta.sol";
 import {Currency} from "@uniswap/v4-core/src/types/Currency.sol";
+import {PoolId, PoolIdLibrary} from "@uniswap/v4-core/src/types/PoolId.sol";
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 import {StateLibrary} from "@uniswap/v4-core/src/libraries/StateLibrary.sol";
 import {IV4Quoter} from "../interfaces/IV4Quoter.sol";
@@ -19,6 +20,8 @@ import {IMsgSender} from "../interfaces/IMsgSender.sol";
 /// to compute the result. They are also not gas efficient and should not be called on-chain.
 contract V4Quoter is IV4Quoter, BaseV4Quoter {
     using QuoterRevert for *;
+    using StateLibrary for IPoolManager;
+    using PoolIdLibrary for PoolKey;
 
     constructor(IPoolManager _poolManager) BaseV4Quoter(_poolManager) {}
 
@@ -32,14 +35,16 @@ contract V4Quoter is IV4Quoter, BaseV4Quoter {
     function quoteExactInputSingle(QuoteExactSingleParams memory params)
         external
         setMsgSender
-        returns (uint256 amountOut, uint256 gasEstimate)
+        returns (uint256 amountOut, uint256 gasEstimate, uint256 sqrtPrice, uint256 newSqrtPrice)
     {
+        PoolId poolId = params.poolKey.toId();
+        (sqrtPrice,,,) = poolManager.getSlot0(poolId);
         uint256 gasBefore = gasleft();
         try poolManager.unlock(abi.encodeCall(this._quoteExactInputSingle, (params))) {}
         catch (bytes memory reason) {
             gasEstimate = gasBefore - gasleft();
             // Extract the quote from QuoteSwap error, or throw if the quote failed
-            amountOut = reason.parseQuoteAmount();
+            (amountOut, newSqrtPrice) = reason.parseQuoteData();
         }
     }
 
@@ -47,14 +52,14 @@ contract V4Quoter is IV4Quoter, BaseV4Quoter {
     function quoteExactInput(QuoteExactParams memory params)
         external
         setMsgSender
-        returns (uint256 amountOut, uint256 gasEstimate)
+        returns (uint256 amountOut, uint256 gasEstimate, uint256 sqrtPrice, uint256 newSqrtPrice)
     {
         uint256 gasBefore = gasleft();
         try poolManager.unlock(abi.encodeCall(this._quoteExactInput, (params))) {}
         catch (bytes memory reason) {
             gasEstimate = gasBefore - gasleft();
             // Extract the quote from QuoteSwap error, or throw if the quote failed
-            amountOut = reason.parseQuoteAmount();
+            (amountOut, newSqrtPrice) = reason.parseQuoteData();
         }
     }
 
@@ -62,14 +67,14 @@ contract V4Quoter is IV4Quoter, BaseV4Quoter {
     function quoteExactOutputSingle(QuoteExactSingleParams memory params)
         external
         setMsgSender
-        returns (uint256 amountIn, uint256 gasEstimate)
+        returns (uint256 amountIn, uint256 gasEstimate, uint256 sqrtPrice, uint256 newSqrtPrice)
     {
         uint256 gasBefore = gasleft();
         try poolManager.unlock(abi.encodeCall(this._quoteExactOutputSingle, (params))) {}
         catch (bytes memory reason) {
             gasEstimate = gasBefore - gasleft();
             // Extract the quote from QuoteSwap error, or throw if the quote failed
-            amountIn = reason.parseQuoteAmount();
+            (amountIn, newSqrtPrice) = reason.parseQuoteData();
         }
     }
 
@@ -77,14 +82,14 @@ contract V4Quoter is IV4Quoter, BaseV4Quoter {
     function quoteExactOutput(QuoteExactParams memory params)
         external
         setMsgSender
-        returns (uint256 amountIn, uint256 gasEstimate)
+        returns (uint256 amountIn, uint256 gasEstimate, uint256 sqrtPrice, uint256 newSqrtPrice)
     {
         uint256 gasBefore = gasleft();
         try poolManager.unlock(abi.encodeCall(this._quoteExactOutput, (params))) {}
         catch (bytes memory reason) {
             gasEstimate = gasBefore - gasleft();
             // Extract the quote from QuoteSwap error, or throw if the quote failed
-            amountIn = reason.parseQuoteAmount();
+            (amountIn, newSqrtPrice) = reason.parseQuoteData();
         }
     }
 
@@ -106,7 +111,7 @@ contract V4Quoter is IV4Quoter, BaseV4Quoter {
             inputCurrency = pathKey.intermediateCurrency;
         }
         // amountIn after the loop actually holds the amountOut of the trade
-        amountIn.revertQuote();
+        amountIn.revertQuote(0);
     }
 
     /// @dev external function called within the _unlockCallback, to simulate a single-hop exact input swap, then revert with the result
@@ -116,7 +121,9 @@ contract V4Quoter is IV4Quoter, BaseV4Quoter {
 
         // the output delta of a swap is positive
         uint256 amountOut = params.zeroForOne ? uint128(swapDelta.amount1()) : uint128(swapDelta.amount0());
-        amountOut.revertQuote();
+        (uint160 sqrtPrice,,,) = poolManager
+            .getSlot0(params.poolKey.toId());
+        amountOut.revertQuote(sqrtPrice);
     }
 
     /// @dev external function called within the _unlockCallback, to simulate an exact output swap, then revert with the result
@@ -138,7 +145,7 @@ contract V4Quoter is IV4Quoter, BaseV4Quoter {
             outputCurrency = pathKey.intermediateCurrency;
         }
         // amountOut after the loop exits actually holds the amountIn of the trade
-        amountOut.revertQuote();
+        amountOut.revertQuote(0);
     }
 
     /// @dev external function called within the _unlockCallback, to simulate a single-hop exact output swap, then revert with the result
@@ -148,7 +155,9 @@ contract V4Quoter is IV4Quoter, BaseV4Quoter {
 
         // the input delta of a swap is negative so we must flip it
         uint256 amountIn = params.zeroForOne ? uint128(-swapDelta.amount0()) : uint128(-swapDelta.amount1());
-        amountIn.revertQuote();
+        (uint160 sqrtPrice,,,) = poolManager
+            .getSlot0(params.poolKey.toId());
+        amountIn.revertQuote(sqrtPrice);
     }
 
     /// @inheritdoc IMsgSender
