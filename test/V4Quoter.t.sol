@@ -3,6 +3,7 @@
 pragma solidity ^0.8.20;
 
 import {Test} from "forge-std/Test.sol";
+import {console} from "forge-std/console.sol";
 import {PathKey} from "../src/libraries/PathKey.sol";
 import {Deploy, IV4Quoter} from "../test/shared/Deploy.sol";
 import {BaseV4Quoter} from "../src/base/BaseV4Quoter.sol";
@@ -93,7 +94,7 @@ contract QuoterTest is Test, Deployers {
         uint256 amountIn = 10000;
         uint256 expectedAmountOut = 9871;
 
-        (uint256 amountOut, uint256 gasEstimate) = quoter.quoteExactInputSingle(
+        (uint256 amountOut, uint256 gasEstimate, uint256 sqrtPrice, uint256 sqrtNewPrice) = quoter.quoteExactInputSingle(
             IV4Quoter.QuoteExactSingleParams({
                 poolKey: key02,
                 zeroForOne: true,
@@ -101,6 +102,10 @@ contract QuoterTest is Test, Deployers {
                 hookData: ZERO_BYTES
             })
         );
+
+        console.log("sqrtPrice: %s", sqrtPrice);
+        console.log("sqrtNewPrice: %s", sqrtNewPrice);
+
         vm.snapshotGasLastCall("Quoter_exactInputSingle_zeroForOne_multiplePositions");
 
         assertGt(gasEstimate, 50000);
@@ -112,7 +117,7 @@ contract QuoterTest is Test, Deployers {
         uint256 amountIn = 10000;
         uint256 expectedAmountOut = 9871;
 
-        (uint256 amountOut, uint256 gasEstimate) = quoter.quoteExactInputSingle(
+        (uint256 amountOut, uint256 gasEstimate, uint256 sqrtPrice, uint256 sqrtNewPrice) = quoter.quoteExactInputSingle(
             IV4Quoter.QuoteExactSingleParams({
                 poolKey: key02,
                 zeroForOne: false,
@@ -120,6 +125,10 @@ contract QuoterTest is Test, Deployers {
                 hookData: ZERO_BYTES
             })
         );
+
+        console.log("sqrtPrice: %s", sqrtPrice);
+        console.log("sqrtNewPrice: %s", sqrtNewPrice);
+
         vm.snapshotGasLastCall("Quoter_exactInputSingle_oneForZero_multiplePositions");
 
         assertGt(gasEstimate, 50000);
@@ -132,7 +141,7 @@ contract QuoterTest is Test, Deployers {
         tokenPath.push(token2);
         IV4Quoter.QuoteExactParams memory params = getExactInputParams(tokenPath, 10000);
 
-        (uint256 amountOut, uint256 gasEstimate) = quoter.quoteExactInput(params);
+        (uint256 amountOut, uint256 gasEstimate,,) = quoter.quoteExactInput(params);
 
         assertGt(gasEstimate, 50000);
         assertLt(gasEstimate, 400000);
@@ -147,7 +156,7 @@ contract QuoterTest is Test, Deployers {
         // -120 is an initialized tick for this pool. We check that we don't count it.
         IV4Quoter.QuoteExactParams memory params = getExactInputParams(tokenPath, 6200);
 
-        (uint256 amountOut, uint256 gasEstimate) = quoter.quoteExactInput(params);
+        (uint256 amountOut, uint256 gasEstimate,,) = quoter.quoteExactInput(params);
 
         assertGt(gasEstimate, 50000);
         assertLt(gasEstimate, 400000);
@@ -162,7 +171,7 @@ contract QuoterTest is Test, Deployers {
         // -60 is an initialized tick for this pool. We check that we don't count it.
         IV4Quoter.QuoteExactParams memory params = getExactInputParams(tokenPath, 4000);
 
-        (uint256 amountOut, uint256 gasEstimate) = quoter.quoteExactInput(params);
+        (uint256 amountOut, uint256 gasEstimate,,) = quoter.quoteExactInput(params);
 
         vm.snapshotGasLastCall("Quoter_quoteExactInput_oneHop_1TickLoaded");
 
@@ -176,7 +185,7 @@ contract QuoterTest is Test, Deployers {
         tokenPath.push(token2);
         IV4Quoter.QuoteExactParams memory params = getExactInputParams(tokenPath, 10);
 
-        (uint256 amountOut, uint256 gasEstimate) = quoter.quoteExactInput(params);
+        (uint256 amountOut, uint256 gasEstimate,,) = quoter.quoteExactInput(params);
 
         assertGt(gasEstimate, 50000);
         assertLt(gasEstimate, 400000);
@@ -189,7 +198,7 @@ contract QuoterTest is Test, Deployers {
         tokenPath.push(token2);
         IV4Quoter.QuoteExactParams memory params = getExactInputParams(tokenPath, 10);
 
-        (uint256 amountOut, uint256 gasEstimate) = quoter.quoteExactInput(params);
+        (uint256 amountOut, uint256 gasEstimate,,) = quoter.quoteExactInput(params);
 
         assertGt(gasEstimate, 50000);
         assertLt(gasEstimate, 400000);
@@ -201,7 +210,7 @@ contract QuoterTest is Test, Deployers {
         tokenPath.push(token0);
         IV4Quoter.QuoteExactParams memory params = getExactInputParams(tokenPath, 10000);
 
-        (uint256 amountOut, uint256 gasEstimate) = quoter.quoteExactInput(params);
+        (uint256 amountOut, uint256 gasEstimate,,) = quoter.quoteExactInput(params);
 
         assertGt(gasEstimate, 50000);
         assertLt(gasEstimate, 400000);
@@ -216,7 +225,7 @@ contract QuoterTest is Test, Deployers {
         // 120 is an initialized tick for this pool. We check that we don't count it.
         IV4Quoter.QuoteExactParams memory params = getExactInputParams(tokenPath, 6250);
 
-        (uint256 amountOut, uint256 gasEstimate) = quoter.quoteExactInput(params);
+        (uint256 amountOut, uint256 gasEstimate,,) = quoter.quoteExactInput(params);
 
         vm.snapshotGasLastCall("Quoter_quoteExactInput_oneHop_initializedAfter");
 
@@ -232,7 +241,7 @@ contract QuoterTest is Test, Deployers {
         IV4Quoter.QuoteExactParams memory params = getExactInputParams(tokenPath, 200);
 
         // Tick 0 initialized. Tick after = 1
-        (uint256 amountOut, uint256 gasEstimate) = quoter.quoteExactInput(params);
+        (uint256 amountOut, uint256 gasEstimate,,) = quoter.quoteExactInput(params);
 
         vm.snapshotGasLastCall("Quoter_quoteExactInput_oneHop_startingInitialized");
 
@@ -247,7 +256,7 @@ contract QuoterTest is Test, Deployers {
         tokenPath.push(token0);
         IV4Quoter.QuoteExactParams memory params = getExactInputParams(tokenPath, 103);
 
-        (uint256 amountOut, uint256 gasEstimate) = quoter.quoteExactInput(params);
+        (uint256 amountOut, uint256 gasEstimate,,) = quoter.quoteExactInput(params);
 
         assertGt(gasEstimate, 50000);
         assertLt(gasEstimate, 400000);
@@ -259,7 +268,8 @@ contract QuoterTest is Test, Deployers {
         tokenPath.push(token1);
         IV4Quoter.QuoteExactParams memory params = getExactInputParams(tokenPath, 10000);
 
-        (uint256 amountOut, uint256 gasEstimate) = quoter.quoteExactInput(params);
+        (uint256 amountOut, uint256 gasEstimate,,) = quoter.quoteExactInput(params);
+
         assertGt(gasEstimate, 50000);
         assertLt(gasEstimate, 400000);
         assertEq(amountOut, 9871);
@@ -271,7 +281,7 @@ contract QuoterTest is Test, Deployers {
         tokenPath.push(token1);
         IV4Quoter.QuoteExactParams memory params = getExactInputParams(tokenPath, 10000);
 
-        (uint256 amountOut, uint256 gasEstimate) = quoter.quoteExactInput(params);
+        (uint256 amountOut, uint256 gasEstimate,,) = quoter.quoteExactInput(params);
 
         vm.snapshotGasLastCall("Quoter_quoteExactInput_twoHops");
 
@@ -282,7 +292,7 @@ contract QuoterTest is Test, Deployers {
 
     function testQuoter_quoteExactOutputSingle_0to1() public {
         uint256 amountOut = 10000;
-        (uint256 amountIn, uint256 gasEstimate) = quoter.quoteExactOutputSingle(
+        (uint256 amountIn, uint256 gasEstimate, uint256 sqrtPrice, uint256 sqrtNewPrice) = quoter.quoteExactOutputSingle(
             IV4Quoter.QuoteExactSingleParams({
                 poolKey: key01,
                 zeroForOne: true,
@@ -290,6 +300,10 @@ contract QuoterTest is Test, Deployers {
                 hookData: ZERO_BYTES
             })
         );
+
+        console.log("sqrtPrice: %s", sqrtPrice);
+        console.log("sqrtNewPrice: %s", sqrtNewPrice);
+
         vm.snapshotGasLastCall("Quoter_exactOutputSingle_zeroForOne");
 
         assertGt(gasEstimate, 50000);
@@ -299,7 +313,7 @@ contract QuoterTest is Test, Deployers {
 
     function testQuoter_quoteExactOutputSingle_1to0() public {
         uint256 amountOut = 10000;
-        (uint256 amountIn, uint256 gasEstimate) = quoter.quoteExactOutputSingle(
+        (uint256 amountIn, uint256 gasEstimate, uint256 sqrtPrice, uint256 sqrtNewPrice) = quoter.quoteExactOutputSingle(
             IV4Quoter.QuoteExactSingleParams({
                 poolKey: key01,
                 zeroForOne: false,
@@ -307,6 +321,10 @@ contract QuoterTest is Test, Deployers {
                 hookData: ZERO_BYTES
             })
         );
+
+        console.log("sqrtPrice: %s", sqrtPrice);
+        console.log("sqrtNewPrice: %s", sqrtNewPrice);
+
         vm.snapshotGasLastCall("Quoter_exactOutputSingle_oneForZero");
 
         assertGt(gasEstimate, 50000);
@@ -319,7 +337,7 @@ contract QuoterTest is Test, Deployers {
         tokenPath.push(token2);
         IV4Quoter.QuoteExactParams memory params = getExactOutputParams(tokenPath, 15000);
 
-        (uint256 amountIn, uint256 gasEstimate) = quoter.quoteExactOutput(params);
+        (uint256 amountIn, uint256 gasEstimate,,) = quoter.quoteExactOutput(params);
 
         vm.snapshotGasLastCall("Quoter_quoteExactOutput_oneHop_2TicksLoaded");
         assertGt(gasEstimate, 50000);
@@ -333,7 +351,7 @@ contract QuoterTest is Test, Deployers {
 
         IV4Quoter.QuoteExactParams memory params = getExactOutputParams(tokenPath, 6143);
 
-        (uint256 amountIn, uint256 gasEstimate) = quoter.quoteExactOutput(params);
+        (uint256 amountIn, uint256 gasEstimate,,) = quoter.quoteExactOutput(params);
 
         vm.snapshotGasLastCall("Quoter_quoteExactOutput_oneHop_initializedAfter");
         assertGt(gasEstimate, 50000);
@@ -347,7 +365,7 @@ contract QuoterTest is Test, Deployers {
 
         IV4Quoter.QuoteExactParams memory params = getExactOutputParams(tokenPath, 4000);
 
-        (uint256 amountIn, uint256 gasEstimate) = quoter.quoteExactOutput(params);
+        (uint256 amountIn, uint256 gasEstimate,,) = quoter.quoteExactOutput(params);
 
         vm.snapshotGasLastCall("Quoter_quoteExactOutput_oneHop_1TickLoaded");
         assertGt(gasEstimate, 50000);
@@ -363,7 +381,8 @@ contract QuoterTest is Test, Deployers {
         IV4Quoter.QuoteExactParams memory params = getExactOutputParams(tokenPath, 100);
 
         // Tick 0 initialized. Tick after = 1
-        (uint256 amountIn, uint256 gasEstimate) = quoter.quoteExactOutput(params);
+        (uint256 amountIn, uint256 gasEstimate,,) = quoter.quoteExactOutput(params);
+
         vm.snapshotGasLastCall("Quoter_quoteExactOutput_oneHop_startingInitialized");
 
         assertGt(gasEstimate, 50000);
@@ -377,7 +396,7 @@ contract QuoterTest is Test, Deployers {
 
         IV4Quoter.QuoteExactParams memory params = getExactOutputParams(tokenPath, 10);
 
-        (uint256 amountIn, uint256 gasEstimate) = quoter.quoteExactOutput(params);
+        (uint256 amountIn, uint256 gasEstimate,,) = quoter.quoteExactOutput(params);
 
         assertGt(gasEstimate, 50000);
         assertLt(gasEstimate, 400000);
@@ -389,7 +408,7 @@ contract QuoterTest is Test, Deployers {
         tokenPath.push(token0);
         IV4Quoter.QuoteExactParams memory params = getExactOutputParams(tokenPath, 15000);
 
-        (uint256 amountIn, uint256 gasEstimate) = quoter.quoteExactOutput(params);
+        (uint256 amountIn, uint256 gasEstimate,,) = quoter.quoteExactOutput(params);
 
         assertGt(gasEstimate, 50000);
         assertLt(gasEstimate, 400000);
@@ -402,7 +421,7 @@ contract QuoterTest is Test, Deployers {
 
         IV4Quoter.QuoteExactParams memory params = getExactOutputParams(tokenPath, 6223);
 
-        (uint256 amountIn, uint256 gasEstimate) = quoter.quoteExactOutput(params);
+        (uint256 amountIn, uint256 gasEstimate,,) = quoter.quoteExactOutput(params);
 
         assertGt(gasEstimate, 50000);
         assertLt(gasEstimate, 400000);
@@ -414,7 +433,7 @@ contract QuoterTest is Test, Deployers {
         tokenPath.push(token0);
 
         IV4Quoter.QuoteExactParams memory params = getExactOutputParams(tokenPath, 6000);
-        (uint256 amountIn, uint256 gasEstimate) = quoter.quoteExactOutput(params);
+        (uint256 amountIn, uint256 gasEstimate,,) = quoter.quoteExactOutput(params);
 
         assertGt(gasEstimate, 50000);
         assertLt(gasEstimate, 400000);
@@ -427,7 +446,7 @@ contract QuoterTest is Test, Deployers {
 
         IV4Quoter.QuoteExactParams memory params = getExactOutputParams(tokenPath, 9871);
 
-        (uint256 amountIn, uint256 gasEstimate) = quoter.quoteExactOutput(params);
+        (uint256 amountIn, uint256 gasEstimate,,) = quoter.quoteExactOutput(params);
 
         assertGt(gasEstimate, 50000);
         assertLt(gasEstimate, 400000);
@@ -441,7 +460,7 @@ contract QuoterTest is Test, Deployers {
 
         IV4Quoter.QuoteExactParams memory params = getExactOutputParams(tokenPath, 9745);
 
-        (uint256 amountIn, uint256 gasEstimate) = quoter.quoteExactOutput(params);
+        (uint256 amountIn, uint256 gasEstimate,,) = quoter.quoteExactOutput(params);
 
         vm.snapshotGasLastCall("Quoter_quoteExactOutput_twoHops");
 

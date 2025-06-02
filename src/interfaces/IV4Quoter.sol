@@ -31,9 +31,11 @@ interface IV4Quoter is IImmutableState, IMsgSender {
     /// hookData arbitrary hookData to pass into the associated hooks
     /// @return amountOut The output quote for the exactIn swap
     /// @return gasEstimate Estimated gas units used for the swap
+    /// @return sqrtPrice The current sqrt price of the pool
+    /// @return newSqrtPrice The new sqrt price after the swap
     function quoteExactInputSingle(QuoteExactSingleParams memory params)
         external
-        returns (uint256 amountOut, uint256 gasEstimate);
+        returns (uint256 amountOut, uint256 gasEstimate, uint256 sqrtPrice, uint256 newSqrtPrice);
 
     /// @notice Returns the delta amounts along the swap path for a given exact input swap
     /// @param params the params for the quote, encoded as 'QuoteExactParams'
@@ -44,7 +46,7 @@ interface IV4Quoter is IImmutableState, IMsgSender {
     /// @return gasEstimate Estimated gas units used for the swap
     function quoteExactInput(QuoteExactParams memory params)
         external
-        returns (uint256 amountOut, uint256 gasEstimate);
+        returns (uint256 amountOut, uint256 gasEstimate, uint256 sqrtPrice, uint256 newSqrtPrice);
 
     /// @notice Returns the delta amounts for a given exact output swap of a single pool
     /// @param params The params for the quote, encoded as `QuoteExactSingleParams`
@@ -56,7 +58,7 @@ interface IV4Quoter is IImmutableState, IMsgSender {
     /// @return gasEstimate Estimated gas units used for the swap
     function quoteExactOutputSingle(QuoteExactSingleParams memory params)
         external
-        returns (uint256 amountIn, uint256 gasEstimate);
+        returns (uint256 amountIn, uint256 gasEstimate, uint256 sqrtPrice, uint256 newSqrtPrice);
 
     /// @notice Returns the delta amounts along the swap path for a given exact output swap
     /// @param params the params for the quote, encoded as 'QuoteExactParams'
@@ -67,5 +69,5 @@ interface IV4Quoter is IImmutableState, IMsgSender {
     /// @return gasEstimate Estimated gas units used for the swap
     function quoteExactOutput(QuoteExactParams memory params)
         external
-        returns (uint256 amountIn, uint256 gasEstimate);
+        returns (uint256 amountIn, uint256 gasEstimate, uint256 sqrtPrice, uint256 newSqrtPrice);
 }
